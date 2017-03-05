@@ -102,11 +102,11 @@
                         }
 
                         
-
-
+                        var d = mag;
+                        var g = 100 * 1/Math.pow(d, 2);
                         //Scale forces along the unit vector
-                        v.x += (oX * (0.098 * 0.9) + fX) / 16;
-                        v.y += (oY * (0.098 * 0.9) + fY)/ 16;
+                        v.x += (oX * g + fX) / 16;
+                        v.y += (oY * g + fY) / 16;
                         
                         
 
@@ -186,10 +186,13 @@
                     var oX = (400 - particle.cX) / mag;
                     var oY = (300 - particle.cY) / mag;
                     
-                  
+                    
+                    var d = mag;
+                    var g = 100 * 1/Math.pow(d, 2);
+
                     //Scale forces along the unit vector
-                    v.x += oX * (0.098 * 0.9) / 16;
-                    v.y += oY * (0.098 * 0.9)/ 16;
+                    v.x += oX * g / 16;
+                    v.y += oY * g / 16;
                     
                     particle.pX = particle.cX;
                     particle.pY = particle.cY;
