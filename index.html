@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+    <head>
+
+    </head>
+    <body>
+
+        <canvas id="game" height="600" width="800" style="border: 1px solid black">
+
+        </canvas>
+
+        <script>
+
+            var keyMap = {};
+
+            window.addEventListener('keydown', function(e) {
+                keyMap[e.key] = true;
+            });
+
+            window.addEventListener('keyup', function(e) {
+                delete keyMap[e.key];
+            });
+
+            document.addEventListener('DOMContentLoaded', function(e) {
+                var canvas = document.getElementById('game');
+                var ctx = canvas.getContext('2d');
+                
+                var particle = new Particle();
+                var start = performance.now();
+                var current = current;
+                var previous = start;
+                var accumulated = 0;
+                var fuel = 50;
+                var v = {
+                    x: 0,
+                    y: 0
+                };
+
+
+                loop();
+
+                function loop() {
+                    window.requestAnimationFrame(loop);
+
+                    current = performance.now();
+                    accumulated += current - previous;
+
+                    while(accumulated % 16 > 0) {
+                        accumulated -= 16;
+                        
+                        v = {
+                            x: (particle.cX - particle.pX) / 16,
+                            y: (particle.cY - particle.pY) / 16 
+                        };
+
+                        //Calc unit vector that points to our object   
+                        var mag = Math.sqrt(Math.pow(particle.cX - 400, 2) + Math.pow(particle.cY - 300, 2));
+                        var oX = (400 - particle.cX) / mag;
+                        var oY = (300 - particle.cY) / mag;
+                        
+                        var fX = 0;
+                        var fY = 0;
+ 
+                        
+                        if(keyMap.hasOwnProperty('q')) {
+                            
+                            var s = Math.sin(0.1);
+                            var c = Math.cos(0.1);
+
+                            particle.dX = particle.dX * c - particle.dY * s;
+                            particle.dY = particle.dX * s + particle.dY * c;
+                            var h = Math.sqrt(Math.pow(particle.dX, 2) + Math.pow(particle.dY, 2));
+                            particle.dX = particle.dX / h;
+                            particle.dY = particle.dY / h;
+
+                        }
+
+                        if(keyMap.hasOwnProperty('w') && fuel > 0) {
+
+                            fX = 0.05 * particle.dX;
+                            fY = 0.05 * particle.dY;
+                            fuel -= 0.05;
+                        }
+                        
+                        if(keyMap.hasOwnProperty('s') && fuel > 0) {
+                            fX = 0.05 * -particle.dX;
+                            fY = 0.05 * -particle.dY;
+                            fuel -= 0.05;
+                        }
+
+
+                        if(keyMap.hasOwnProperty('e')) {
+                            
+                            var s = Math.sin(-0.1);
+                            var c = Math.cos(-0.1);
+
+                            particle.dX = particle.dX * c - particle.dY * s;
+                            particle.dY = particle.dX * s + particle.dY * c;
+                            var h = Math.sqrt(Math.pow(particle.dX, 2) + Math.pow(particle.dY, 2));
+                            particle.dX = particle.dX / h;
+                            particle.dY = particle.dY / h;
+                        }
+
+                        
+
+
+                        //Scale forces along the unit vector
+                        v.x += (oX * (0.098 * 0.9) + fX) / 16;
+                        v.y += (oY * (0.098 * 0.9) + fY)/ 16;
+                        
+                        
+
+                        particle.pX = particle.cX;
+                        particle.pY = particle.cY;
+                        
+                        particle.cX += v.x * 16;
+                        particle.cY += v.y * 16;
+
+                        
+                       
+                       
+
+                        
+                    } 
+                    ctx.clearRect(0, 0, 800, 600);
+                    ctx.beginPath();
+                    ctx.ellipse(particle.cX, particle.cY, 15, 15, 0, 0, 2 * Math.PI);
+                    ctx.stroke();
+
+                    var points = simulate(10000, Object.assign({}, particle));
+                    ctx.beginPath();
+                    ctx.moveTo(points[0].x, points[0].i);
+                    for(p of points) {
+                        ctx.lineTo(p.x, p.y);
+                    }
+                    ctx.strokeStyle = '#cccccc';
+                    ctx.stroke();
+                    ctx.strokeStyle = '#000';
+                    ctx.beginPath();
+                    ctx.ellipse(400, 300, 25, 25, 0, 0, 2 * Math.PI);
+                    ctx.stroke();
+                    
+                    ctx.moveTo(particle.cX, particle.cY);
+                    ctx.lineTo(particle.cX + particle.dX * 15, particle.cY + particle.dY * 15);
+                    ctx.closePath();
+                    ctx.stroke();
+                    
+                    if(fuel < 0) {
+                        fuel = 0;
+                    }
+                    ctx.font = "30px Arial";
+                    ctx.fillText("Fuel: " + fuel.toFixed(2) + ' units',10,50);
+
+
+                    
+                    previous = current;
+                }
+
+               
+
+
+            }, false);
+             function Particle() {
+                this.cX = 0;
+                this.cY = 0;
+                this.pX = 0;
+                this.pY = 0;
+                this.dX = 0.5;
+                this.dY = 0.5;
+            }
+
+            function simulate(accumulated, particle) {
+                var points = [];
+                
+                
+                while(accumulated >= 16) {
+                    accumulated -= 16;
+                    
+                    v = {
+                        x: (particle.cX - particle.pX) / 16,
+                        y: (particle.cY - particle.pY) / 16 
+                    };
+
+                    //Calc unit vector that points to our object   
+                    var mag = Math.sqrt(Math.pow(particle.cX - 400, 2) + Math.pow(particle.cY - 300, 2));
+                    var oX = (400 - particle.cX) / mag;
+                    var oY = (300 - particle.cY) / mag;
+                    
+                  
+                    //Scale forces along the unit vector
+                    v.x += oX * (0.098 * 0.9) / 16;
+                    v.y += oY * (0.098 * 0.9)/ 16;
+                    
+                    particle.pX = particle.cX;
+                    particle.pY = particle.cY;
+                    
+                    particle.cX += v.x * 16;
+                    particle.cY += v.y * 16;
+
+                    points.push({
+                        x: particle.cX,
+                        y: particle.cY
+                    });
+                   
+                } 
+                
+                return points;
+            }
+
+            function toDegrees(radians) {
+                
+                return radians * (180/Math.PI);
+            }
+        </script>
+    </body>
+</html>
