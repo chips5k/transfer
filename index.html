@@ -11,6 +11,18 @@
 
         <script>
 
+            var util = {
+               toDegrees: function(radians) {
+                   return radians * 180 / Math.PI;
+                },
+                toRadians: function(degrees) {
+                    return degrees * Math.PI / 180;
+                },
+                inverseSquare: function(scalar) {
+                    return 1 / Math.pow(scalar, 2);
+                }
+           }
+
             var keyMap = {};
 
             window.addEventListener('keydown', function(e) {
@@ -37,11 +49,11 @@
                     y: 0
                 };
 
-
+                 console.log(particle.velocity());
                 //Kick off main loop
                 loop();
                 
-
+                
                 function loop() {
                     //Queue up next render/loop call
                     window.requestAnimationFrame(loop);
@@ -57,61 +69,61 @@
                     while(accumulated % 16 > 0) {
                         //Consume 16 milliseconds
                         accumulated -= 16;
-
+                        
+                       
                         //Retrieve current/initial velocity and divide by milliseconds
-                        var velocity = particle.velocity().divide(16);
-
+                        var velocity = particle.velocity();
+                        
                         //Calc gravity unit vector that points to our object   
-                        var gravityUnitVector = Vector2d.subtract(particle.position, planet.position);
+                        var gravityUnitVector = Vector2d.subtract(planet.position, particle.position);
+                        
                         var gravityMagnitude = gravityUnitVector.magnitude();
                         gravityUnitVector.divide(gravityMagnitude);
-                        
+                       
                         var thrust = new Vector2d(0, 0);
  
                         //Rotate left
                         if(keyMap.hasOwnProperty('q')) {
-                            particle.direction.rotate(0.01).normalize();
+                            particle.heading.rotate(0.1).normalize();
                         }
 
                         //Rotate right
                         if(keyMap.hasOwnProperty('e')) {
-                            particle.direction.rotate(-0.01).normalize();
+                            particle.heading.rotate(-0.1).normalize();
                         }
 
                         //Apply forward thrust
                         if(keyMap.hasOwnProperty('w') && fuel > 0) {
-                            thrust = Vector2d.multiply(particle.direction, 0.05);
-                            fuel -= 0.05;
+                            thrust = Vector2d.multiply(particle.heading,0.005);
+                            fuel -= 0.005;
                         }
 
                         //Apply reverse thrust
                         if(keyMap.hasOwnProperty('s') && fuel > 0) {
-                            thrust = Vector2d.multiply(Vector2d.invert(particle.direction), 0.05);
-                            fuel -= 0.05;
+                            thrust = Vector2d.multiply(Vector2d.invert(particle.heading), 0.005);
+                            fuel -= 0.005;
                         }
 
+                       
                         //Reduce gravity based on distance from source
-                        var g = 100 * util.inverseSquare(gravityMagnitude);
-
+                        var g = 9.8 * util.inverseSquare(gravityMagnitude);
+                       
                         //Add forces to the velocity vector and divide by milliseconds
-                        velocity.add(gravityUnitVector.multiply(g).add(thurst).divide(16));
-
+                        velocity.add(gravityUnitVector.multiply(g).add(thrust));
                         //Store previous position
                         particle.lastPosition = particle.position.clone();
-
+                            
                         //Update current position - multiply velocity by milliseconds
-                        particle.position.add(velocity.multiply(16));
-                        
-                        
+                        particle.position.add(velocity);
                     } 
 
                     //Render!
                     ctx.clearRect(0, 0, 800, 600);
                     ctx.beginPath();
-                    ctx.ellipse(particle.cX, particle.cY, 15, 15, 0, 0, 2 * Math.PI);
+                    ctx.ellipse(particle.position.x, particle.position.y, 15, 15, 0, 0, 2 * Math.PI);
                     ctx.stroke();
 
-                    var points = simulate(10000, Object.assign({}, particle));
+                    var points = simulate(15000, particle.clone(), planet.clone());
                     ctx.beginPath();
                     ctx.moveTo(points[0].x, points[0].i);
                     for(p of points) {
@@ -124,8 +136,8 @@
                     ctx.ellipse(400, 300, 25, 25, 0, 0, 2 * Math.PI);
                     ctx.stroke();
                     
-                    ctx.moveTo(particle.cX, particle.cY);
-                    ctx.lineTo(particle.cX + particle.dX * 15, particle.cY + particle.dY * 15);
+                    ctx.moveTo(particle.position.x, particle.position.y);
+                    ctx.lineTo(particle.position.x + particle.heading.x * 15, particle.position.y + particle.heading.y * 15);
                     ctx.closePath();
                     ctx.stroke();
                     
@@ -145,40 +157,36 @@
 
             }, false);
 
-            function simulate(accumulated, particle) {
+            function simulate(accumulated, particle, planet) {
                 var points = [];
                 
                 
                 while(accumulated >= 16) {
                     accumulated -= 16;
                     
-                    v = {
-                        x: (particle.cX - particle.pX) / 16,
-                        y: (particle.cY - particle.pY) / 16 
-                    };
-
-                    //Calc unit vector that points to our object   
-                    var mag = Math.sqrt(Math.pow(particle.cX - 400, 2) + Math.pow(particle.cY - 300, 2));
-                    var oX = (400 - particle.cX) / mag;
-                    var oY = (300 - particle.cY) / mag;
-                    
-                    
-                    var d = mag;
-                    var g = 100 * 1/Math.pow(d, 2);
-
-                    //Scale forces along the unit vector
-                    v.x += oX * g / 16;
-                    v.y += oY * g / 16;
-                    
-                    particle.pX = particle.cX;
-                    particle.pY = particle.cY;
-                    
-                    particle.cX += v.x * 16;
-                    particle.cY += v.y * 16;
+                    //Retrieve current/initial velocity and divide by milliseconds
+                        var velocity = particle.velocity();
+                        
+                        //Calc gravity unit vector that points to our object   
+                        var gravityUnitVector = Vector2d.subtract(planet.position, particle.position);
+                        
+                        var gravityMagnitude = gravityUnitVector.magnitude();
+                        gravityUnitVector.divide(gravityMagnitude);
+                       
+                        //Reduce gravity based on distance from source
+                        var g = 9.8 * util.inverseSquare(gravityMagnitude);
+                       
+                        //Add forces to the velocity vector and divide by milliseconds
+                        velocity.add(gravityUnitVector.multiply(g));
+                        //Store previous position
+                        particle.lastPosition = particle.position.clone();
+                            
+                        //Update current position - multiply velocity by milliseconds
+                        particle.position.add(velocity);
 
                     points.push({
-                        x: particle.cX,
-                        y: particle.cY
+                        x: particle.position.x,
+                        y: particle.position.y
                     });
                    
                 } 
@@ -189,13 +197,22 @@
             
 
             function Particle(x, y, radians) {
-                this.currentPosition = new Vector2d(x, y);
+                this.position = new Vector2d(x, y);
                 this.lastPosition = new Vector2d(x, y);
-                this.heading = new Vector2d(0, 0);
+                this.heading = new Vector2d(0.5, 0.5);
+            }
+
+
+            Particle.prototype.clone = function() {
+                var p = new Particle();
+                p.position = this.position.clone();
+                p.lastPosition = this.lastPosition.clone();
+                p.heading = this.heading.clone();
+                return p;
             }
 
             Particle.prototype.velocity = function() {
-                return Vector2d.subtract(this.currentPosition, lastPosition);
+                return Vector2d.subtract(this.position, this.lastPosition);
             }
 
            function Vector2d(x, y) {
@@ -204,128 +221,93 @@
            }
 
            Vector2d.prototype.magnitude = function() {
-                return  Math.sqrt(Math.pow(this.x, 2) + Math.pow(this.y, 2));
+                return Math.sqrt(Math.pow(this.x, 2) + Math.pow(this.y, 2));
            }
             
-           Vector2d.prototype.invert = function(v) {
+           Vector2d.invert = function(v) {
                return new Vector2d(-v.x, -v.y);
            }
 
-            //Addition Convenience method
-           Vector2d.prototype.add = function() {
-               if(this.constructor.name === 'Vector2d') {
-                   return this.mutateAdd(...arguments);
-               } else {
-                   return this.immutableAdd(...arguments);
-               }
-           };
+        Vector2d.prototype.clone = function() {
+            return new Vector2d(this.x, this.y);
+        }
 
-           Vector2d.prototype.mutateAdd = function(v) {
+           Vector2d.prototype.add = function(v) {
                this.x += v.x;
                this.y += v.y;
+               return this;
            };
 
            
-           Vector2d.prototype.immutableAdd = function(v1, v2) {
+           Vector2d.add = function(v1, v2) {
                return new Vector2d(v1.x + v2.x, v1.y + v2.y);
            };
 
-          
-           Vector2d.prototype.subtract = function() {
-               if(this.constructor.name === 'Vector2d') {
-                   return this.mutateSubtract(...arguments);
-               } else {
-                   return this.immutableSubtract(...arguments);
-               }
-           };
-
-           Vector2d.prototype.mutateSubtract = function(v) {
+           Vector2d.prototype.subtract = function(v) {
                this.x - v.x;
                this.y - v.y;
+               return this;
            };
 
-           Vector2d.prototype.immutableSubtract = function(v1, v2) {
-               return new Vector2d(v1.x + v2.x, v1.y + v2.y);
+           Vector2d.subtract = function(v1, v2) {
+               return new Vector2d(v1.x - v2.x, v1.y - v2.y);
            };
            
-
+           
            Vector2d.prototype.normalize = function(v) {
-               if(this.constructor.name === 'Vector2d') {
-                   return this.mutateNormalize(...arguments);
-               } else {
-                   return this.immutableNormalize(...arguments);
-               }
-           };
-           
-           Vector2d.prototype.mutateNormalize = function(v) {
                 this.divide(this.magnitude());
+                return this;
            };
 
-           Vector2d.prototype.immutableNormalize = function(v) {
+           Vector2d.normalize = function(v) {
                 return Vector2d.divide(v, v.magnitude());
            };
 
-           Vector2d.prototype.divide = function() {
-               if(this.constructor.name === 'Vector2d') {
-                   return this.mutateDivide(...arguments);
-               } else {
-                   return this.immutableDivide(...arguments);
-               }
-           };
 
-           Vector2d.prototype.mutateDivide = function(scalar) {
+           Vector2d.prototype.divide = function(scalar) {
                this.x /= scalar;
                this.y /= scalar;
+               return this;
            };
 
-           Vector2d.prototype.immutableDivide = function(v, scalar) {
+           Vector2d.divide = function(v, scalar) {
                return new Vector2d(v1.x / scalar, v1.y / scalar);
            };
 
-           
 
-           Vector2d.prototype.multiply = function() {
-               if(this.constructor.name === 'Vector2d') {
-                   return this.mutateMultiply(...arguments);
-               } else {
-                   return this.immutableMultiply(...arguments);
-               }
-           };
 
-           Vector2d.prototype.mutateMultiply = function(scalar) {
+           Vector2d.prototype.multiply = function(scalar) {
                this.x *= scalar;
                this.y *= scalar;
+               return this;
            };
 
 
-           Vector2d.prototype.immutableMultiply = function(v, scalar) {
-               return new Vector2d(v1.x * scalar, v1.y * scalar);
+           Vector2d.multiply = function(v, scalar) {
+               return new Vector2d(v.x * scalar, v.y * scalar);
            };
-
            
 
            Vector2d.prototype.lookAt = function(v1, v2) {
 
            };
 
-           Vector2d.prototype.rotate = function(v, radians) {
-               if(this.constructor.name === 'Vector2d') {
-                   return this.mutateRotate(...arguments);
-               } else {
-                   return this.immutableRotate(...arguments);
-               }
-        };
+           Vector2d.lookAt = function(v1, v2) {
 
-            Vector2d.prototype.mutateRotate = function(radians) {
+           };
+
+
+            Vector2d.prototype.rotate = function(radians) {
 
                 var sin = Math.sin(radians);
                 var cos = Math.cos(radians);
 
                 this.x = this.x * cos - this.y * sin;
                 this.y = this.x * sin + this.y * cos;
+                return this;
             }
 
-            Vector2d.prototype.immutableRotate = function(v, radians) {
+            Vector2d.rotate = function(v, radians) {
 
                 var sin = Math.sin(radians);
                 var cos = Math.cos(radians);
@@ -336,17 +318,7 @@
                 return new Vector2d(x, y);
             }
 
-           var util = {
-               toDegrees: function(radians) {
-                   return radians * 180 / Math.PI;
-                },
-                toRadians: function(degrees) {
-                    return degrees * Math.PI / 180;
-                },
-                inverseSquare: function(scalar) {
-                    return 1/Math.pow(scalar);
-                }
-           }
+           
 
         </script>
     </body>
