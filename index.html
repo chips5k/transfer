@@ -25,7 +25,7 @@
                 var canvas = document.getElementById('game');
                 var ctx = canvas.getContext('2d');
                 
-                var particle = new Particle();
+                var particle = new Particle(10, 10);
                 var start = performance.now();
                 var current = current;
                 var previous = start;
@@ -38,6 +38,7 @@
 
 
                 loop();
+                
 
                 function loop() {
                     window.requestAnimationFrame(loop);
@@ -160,14 +161,6 @@
 
 
             }, false);
-             function Particle() {
-                this.cX = 0;
-                this.cY = 0;
-                this.pX = 0;
-                this.pY = 0;
-                this.dX = 0.5;
-                this.dY = 0.5;
-            }
 
             function simulate(accumulated, particle) {
                 var points = [];
@@ -210,10 +203,164 @@
                 return points;
             }
 
-            function toDegrees(radians) {
-                
-                return radians * (180/Math.PI);
+            
+
+            function Particle(x, y, radians) {
+                this.currentPosition = new Vector2d(x, y);
+                this.lastPosition = new Vector2d(x, y);
+                this.heading = new Vector2d(0, 0);
             }
+
+            Particle.prototype.velocity = function() {
+                return Vector2d.subtract(this.currentPosition, lastPosition);
+            }
+
+           function Vector2d(x, y) {
+               this.x = x;
+               this.y = y;
+           }
+
+           Vector2d.prototype.magnitude = function() {
+                return  Math.sqrt(Math.pow(this.x, 2) + Math.pow(this.y, 2));
+           }
+            
+            //Addition Convenience method
+           Vector2d.prototype.add = function() {
+               if(this.constructor.name === 'Vector2d') {
+                   return this.mutateAdd(...arguments);
+               } else {
+                   return this.immutableAdd(...arguments);
+               }
+           };
+
+           Vector2d.prototype.mutateAdd = function(v) {
+               this.x += v.x;
+               this.y += v.y;
+           };
+
+           
+           Vector2d.prototype.immutableAdd = function(v1, v2) {
+               return new Vector2d(v1.x + v2.x, v1.y + v2.y);
+           };
+
+          
+           Vector2d.prototype.subtract = function() {
+               if(this.constructor.name === 'Vector2d') {
+                   return this.mutateSubtract(...arguments);
+               } else {
+                   return this.immutableSubtract(...arguments);
+               }
+           };
+
+           Vector2d.prototype.mutateSubtract = function(v) {
+               this.x - v.x;
+               this.y - v.y;
+           };
+
+           Vector2d.prototype.immutableSubtract = function(v1, v2) {
+               return new Vector2d(v1.x + v2.x, v1.y + v2.y);
+           };
+           
+
+           Vector2d.prototype.normalize = function(v) {
+               if(this.constructor.name === 'Vector2d') {
+                   return this.mutateNormalize(...arguments);
+               } else {
+                   return this.immutableNormalize(...arguments);
+               }
+           };
+           
+           Vector2d.prototype.mutateNormalize = function(v) {
+                this.divide(this.magnitude());
+           };
+
+           Vector2d.prototype.immutableNormalize = function(v) {
+                return Vector2d.divide(v, v.magnitude());
+           };
+
+           Vector2d.prototype.divide = function() {
+               if(this.constructor.name === 'Vector2d') {
+                   return this.mutateDivide(...arguments);
+               } else {
+                   return this.immutableDivide(...arguments);
+               }
+           };
+
+           Vector2d.prototype.mutateDivide = function(scalar) {
+               this.x /= scalar;
+               this.y /= scalar;
+           };
+
+           Vector2d.prototype.immutableDivide = function(v, scalar) {
+               return new Vector2d(v1.x / scalar, v1.y / scalar);
+           };
+
+           
+
+           Vector2d.prototype.multiply = function() {
+               if(this.constructor.name === 'Vector2d') {
+                   return this.mutateMultiply(...arguments);
+               } else {
+                   return this.immutableMultiply(...arguments);
+               }
+           };
+
+           Vector2d.prototype.mutateMultiply = function(scalar) {
+               this.x *= scalar;
+               this.y *= scalar;
+           };
+
+
+           Vector2d.prototype.immutableMultiply = function(v, scalar) {
+               return new Vector2d(v1.x * scalar, v1.y * scalar);
+           };
+
+           
+
+           Vector2d.prototype.lookAt = function(v1, v2) {
+
+           };
+
+           Vector2d.prototype.rotate = function(v, radians) {
+               if(this.constructor.name === 'Vector2d') {
+                   return this.mutateRotate(...arguments);
+               } else {
+                   return this.immutableRotate(...arguments);
+               }
+        };
+
+            Vector2d.prototype.mutateRotate = function(radians) {
+
+                var sin = Math.sin(radians);
+                var cos = Math.cos(radians);
+
+                this.x = this.x * cos - this.y * sin;
+                this.y = this.x * sin + this.y * cos;
+            }
+
+            Vector2d.prototype.immutableRotate = function(v, radians) {
+
+                var sin = Math.sin(radians);
+                var cos = Math.cos(radians);
+
+                var x = v.x * cos - v.y * sin;
+                var y = v.x * sin + v.y * cos;
+                
+                return new Vector2d(x, y);
+            }
+
+           var util = {
+               toDegrees: function(radians) {
+                   return radians * 180 / Math.PI;
+                },
+                toRadians: function(degrees) {
+                    return degrees * Math.PI / 180;
+                },
+                inverseSquare: function(scalar) {
+                    return 1/Math.pow(scalar);
+                }
+           }
+
         </script>
     </body>
 </html>
