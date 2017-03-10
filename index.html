@@ -181,37 +181,36 @@
                     accumulated -= 16;
                     
                    for(var i of bodies) {
-                       if(ref === i.ref) {
+                      
                             
-                            //Retrieve current/initial velocity and divide by milliseconds
-                            var velocity = i.velocity();
-                            for(var j of bodies) {
-                                if(j !== i) {
+                        //Retrieve current/initial velocity and divide by milliseconds
+                        var velocity = i.velocity();
+                        for(var j of bodies) {
+                            if(j !== i) {
 
-                                    //Setup a vector pointing from j to i (and normalize it into a unit vector)
-                                    var dirVector = Vector2d.subtract(j.position, i.position);
-                                    
-                                    var dirMag = dirVector.magnitude();
-                                    dirVector.divide(dirMag);
-                                    
-                                    //Calculate gravity based on mass of j and distance to i
-                                    //Reduce gravity based on distance from source
-                                    var g = 0.0098 * j.mass * util.inverseSquare(dirMag);
-                                    
-                                    velocity.add(dirVector.multiply(g));
-                                }
-
+                                //Setup a vector pointing from j to i (and normalize it into a unit vector)
+                                var dirVector = Vector2d.subtract(j.position, i.position);
+                                
+                                var dirMag = dirVector.magnitude();
+                                dirVector.divide(dirMag);
+                                
+                                //Calculate gravity based on mass of j and distance to i
+                                //Reduce gravity based on distance from source
+                                var g = 0.0098 * j.mass * util.inverseSquare(dirMag);
+                                
+                                velocity.add(dirVector.multiply(g));
                             }
 
-                            
-                            i.lastPosition = i.position.clone();
-                            i.position.add(velocity);
-                            
+                        }
+                        
+                        i.lastPosition = i.position.clone();
+                        i.position.add(velocity);
+                        if(ref === i.ref) {
                             points.push({
                                 x: i.position.x,
                                 y: i.position.y
                             });
-                       }
+                        }
                     }
                 } 
                 
