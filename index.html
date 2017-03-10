@@ -36,9 +36,15 @@
             document.addEventListener('DOMContentLoaded', function(e) {
                 var canvas = document.getElementById('game');
                 var ctx = canvas.getContext('2d');
+
+                var player = new Particle('Player', 10, 10, 10, 5, new Vector2d(0, 0));
+
+                var bodies = [
+                    player,
+                    new Particle('Planet', 400, 300, 10000, 25, new Vector2d(0, 0)),
+                    new Particle('Moon', 500, 300, 300, 10, new Vector2d(.65, -0.96))
+                ];
                 
-                var particle = new Particle(10, 10);
-                var planet = new Particle(400, 300);
                 var start = performance.now();
                 var current = current;
                 var previous = start;
@@ -49,7 +55,7 @@
                     y: 0
                 };
 
-                 console.log(particle.velocity());
+                
                 //Kick off main loop
                 loop();
                 
@@ -70,80 +76,91 @@
                         //Consume 16 milliseconds
                         accumulated -= 16;
                         
-                       
-                        //Retrieve current/initial velocity and divide by milliseconds
-                        var velocity = particle.velocity();
-                        
-                        //Calc gravity unit vector that points to our object   
-                        var gravityUnitVector = Vector2d.subtract(planet.position, particle.position);
-                        
-                        var gravityMagnitude = gravityUnitVector.magnitude();
-                        gravityUnitVector.divide(gravityMagnitude);
-                       
-                        var thrust = new Vector2d(0, 0);
- 
+
                         //Rotate left
                         if(keyMap.hasOwnProperty('q')) {
-                            particle.heading.rotate(0.1).normalize();
+                            player.heading.rotate(0.1).normalize();
                         }
 
                         //Rotate right
                         if(keyMap.hasOwnProperty('e')) {
-                            particle.heading.rotate(-0.1).normalize();
+                            player.heading.rotate(-0.1).normalize();
                         }
 
                         //Apply forward thrust
                         if(keyMap.hasOwnProperty('w') && fuel > 0) {
-                            thrust = Vector2d.multiply(particle.heading,0.005);
+                            player.acceleration = Vector2d.multiply(player.heading,0.005);
                             fuel -= 0.005;
                         }
 
                         //Apply reverse thrust
                         if(keyMap.hasOwnProperty('s') && fuel > 0) {
-                            thrust = Vector2d.multiply(Vector2d.invert(particle.heading), 0.005);
+                            player.acceleration = Vector2d.multiply(Vector2d.invert(player.heading), 0.005);
                             fuel -= 0.005;
                         }
+                        
+                        var count = 0;
+                        for(var i of bodies) {
+                                //Retrieve current/initial velocity and divide by milliseconds
+                                var velocity = i.velocity();
+                                for(var j of bodies) {
+                                    if(j !== i) {
 
-                       
-                        //Reduce gravity based on distance from source
-                        var g = 9.8 * util.inverseSquare(gravityMagnitude);
-                       
-                        //Add forces to the velocity vector and divide by milliseconds
-                        velocity.add(gravityUnitVector.multiply(g).add(thrust));
-                        //Store previous position
-                        particle.lastPosition = particle.position.clone();
-                            
-                        //Update current position - multiply velocity by milliseconds
-                        particle.position.add(velocity);
+                                        //Setup a vector pointing from j to i (and normalize it into a unit vector)
+                                        var dirVector = Vector2d.subtract(j.position, i.position);
+                                       
+                                        var dirMag = dirVector.magnitude();
+                                        dirVector.divide(dirMag);
+                                        
+                                        //Calculate gravity based on mass of j and distance to i
+                                        //Reduce gravity based on distance from source
+                                        var g = 0.0098 * j.mass * util.inverseSquare(dirMag);
+                                       
+                                        velocity.add(dirVector.multiply(g));
+                                    }
+
+                                }
+
+                                
+                                velocity.add(i.acceleration);
+                                
+                                i.lastPosition = i.position.clone();
+                                i.position.add(velocity);
+                                i.acceleration = new Vector2d(0, 0);
+                        }
                     } 
 
-                    //Render!
-                    ctx.clearRect(0, 0, 800, 600);
-                    ctx.beginPath();
-                    ctx.ellipse(particle.position.x, particle.position.y, 15, 15, 0, 0, 2 * Math.PI);
-                    ctx.stroke();
 
-                    var points = simulate(15000, particle.clone(), planet.clone());
-                    ctx.beginPath();
-                    ctx.moveTo(points[0].x, points[0].i);
-                    for(p of points) {
-                        ctx.lineTo(p.x, p.y);
-                    }
-                    ctx.strokeStyle = '#cccccc';
-                    ctx.stroke();
+                    ctx.clearRect(0, 0, 800, 600);
                     ctx.strokeStyle = '#000';
-                    ctx.beginPath();
-                    ctx.ellipse(400, 300, 25, 25, 0, 0, 2 * Math.PI);
-                    ctx.stroke();
+                    for(var i of bodies) {
+                        ctx.beginPath();
+                        ctx.ellipse(i.position.x, i.position.y, i.radius, i.radius, 0, 0, 2 * Math.PI);
+                        ctx.closePath()
+                        ctx.stroke();
+                    }
                     
-                    ctx.moveTo(particle.position.x, particle.position.y);
-                    ctx.lineTo(particle.position.x + particle.heading.x * 15, particle.position.y + particle.heading.y * 15);
+                    var points = simulate(10000, player.ref, bodies.map(function(b) { return b.clone(); }));
+                    
+                    if(points.length) {
+                        ctx.beginPath();
+                        ctx.moveTo(points[0].x, points[0].i);
+                        for(p of points) {
+                            ctx.lineTo(p.x, p.y);
+                        }
+                        ctx.strokeStyle = '#cccccc';
+                        ctx.stroke();
+                    }
+                   
+                    ctx.moveTo(player.position.x, player.position.y);
+                    ctx.lineTo(player.position.x + player.heading.x * player.radius, player.position.y + player.heading.y * player.radius);
                     ctx.closePath();
                     ctx.stroke();
                     
                     if(fuel < 0) {
                         fuel = 0;
                     }
+
                     ctx.font = "30px Arial";
                     ctx.fillText("Fuel: " + fuel.toFixed(2) + ' units',10,50);
 
@@ -157,38 +174,45 @@
 
             }, false);
 
-            function simulate(accumulated, particle, planet) {
+            function simulate(accumulated, ref, bodies) {
                 var points = [];
-                
                 
                 while(accumulated >= 16) {
                     accumulated -= 16;
                     
-                    //Retrieve current/initial velocity and divide by milliseconds
-                        var velocity = particle.velocity();
-                        
-                        //Calc gravity unit vector that points to our object   
-                        var gravityUnitVector = Vector2d.subtract(planet.position, particle.position);
-                        
-                        var gravityMagnitude = gravityUnitVector.magnitude();
-                        gravityUnitVector.divide(gravityMagnitude);
-                       
-                        //Reduce gravity based on distance from source
-                        var g = 9.8 * util.inverseSquare(gravityMagnitude);
-                       
-                        //Add forces to the velocity vector and divide by milliseconds
-                        velocity.add(gravityUnitVector.multiply(g));
-                        //Store previous position
-                        particle.lastPosition = particle.position.clone();
+                   for(var i of bodies) {
+                       if(ref === i.ref) {
                             
-                        //Update current position - multiply velocity by milliseconds
-                        particle.position.add(velocity);
+                            //Retrieve current/initial velocity and divide by milliseconds
+                            var velocity = i.velocity();
+                            for(var j of bodies) {
+                                if(j !== i) {
 
-                    points.push({
-                        x: particle.position.x,
-                        y: particle.position.y
-                    });
-                   
+                                    //Setup a vector pointing from j to i (and normalize it into a unit vector)
+                                    var dirVector = Vector2d.subtract(j.position, i.position);
+                                    
+                                    var dirMag = dirVector.magnitude();
+                                    dirVector.divide(dirMag);
+                                    
+                                    //Calculate gravity based on mass of j and distance to i
+                                    //Reduce gravity based on distance from source
+                                    var g = 0.0098 * j.mass * util.inverseSquare(dirMag);
+                                    
+                                    velocity.add(dirVector.multiply(g));
+                                }
+
+                            }
+
+                            
+                            i.lastPosition = i.position.clone();
+                            i.position.add(velocity);
+                            
+                            points.push({
+                                x: i.position.x,
+                                y: i.position.y
+                            });
+                       }
+                    }
                 } 
                 
                 return points;
@@ -196,15 +220,22 @@
 
             
 
-            function Particle(x, y, radians) {
+            function Particle(ref, x, y, mass, radius, acceleration) {
+                this.ref = ref;
+                this.acceleration = acceleration;
                 this.position = new Vector2d(x, y);
                 this.lastPosition = new Vector2d(x, y);
                 this.heading = new Vector2d(0.5, 0.5);
+                this.mass = mass;
+                this.radius = radius;
             }
 
 
             Particle.prototype.clone = function() {
                 var p = new Particle();
+                p.ref = this.ref;
+                p.mass = this.mass;
+                p.radius = this.radius;
                 p.position = this.position.clone();
                 p.lastPosition = this.lastPosition.clone();
                 p.heading = this.heading.clone();
