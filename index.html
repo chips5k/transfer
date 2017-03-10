@@ -150,13 +150,30 @@
                         }
                         ctx.strokeStyle = '#cccccc';
                         ctx.stroke();
+                        ctx.closePath();
                     }
-                   
+
+                    var points = simulate(10000, 'Moon', bodies.map(function(b) { return b.clone(); }));
+                    
+                    if(points.length) {
+                        ctx.beginPath();
+                        ctx.moveTo(points[0].x, points[0].i);
+                        for(p of points) {
+                            ctx.lineTo(p.x, p.y);
+                        }
+                        ctx.strokeStyle = '#eeeeee';
+                        ctx.stroke();
+                      
+                    }
+
+                    ctx.beginPath();
                     ctx.moveTo(player.position.x, player.position.y);
                     ctx.lineTo(player.position.x + player.heading.x * player.radius, player.position.y + player.heading.y * player.radius);
                     ctx.closePath();
+                      ctx.strokeStyle = '#000';
                     ctx.stroke();
                     
+                  
                     if(fuel < 0) {
                         fuel = 0;
                     }
