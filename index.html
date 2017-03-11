@@ -23,26 +23,61 @@
                 }
            }
 
-            var keyMap = {};
-
-            window.addEventListener('keydown', function(e) {
-                keyMap[e.key] = true;
-            });
-
-            window.addEventListener('keyup', function(e) {
-                delete keyMap[e.key];
-            });
+           
+           
+            
 
             document.addEventListener('DOMContentLoaded', function(e) {
+                var camera = {
+                    x: 0,
+                    y: 0,
+                    zoom: 1
+                };
+
+                 var keyMap = {};
+                 var mouseState = {
+                     down: false
+                 };
+
+                window.addEventListener('keydown', function(e) {
+                    keyMap[e.key] = true;
+                });
+
+                window.addEventListener('keyup', function(e) {
+                    delete keyMap[e.key];
+                });
+
+                window.addEventListener('wheel', function(e) {
+                    camera.zoom += e.wheelDelta > 0 ? 0.03 : -0.03;
+                });
+
+                window.addEventListener('mousedown', function(e) {
+                    mouseState.down = true;
+                    
+                });
+
+                window.addEventListener('mousemove', function(e) {
+                    if(mouseState.down) {
+                        camera.x -= e.movementX;
+                        camera.y += e.movementY;
+                    }
+                });
+
+                window.addEventListener('mouseup', function() {
+                    mouseState.down = false;
+                });
+
                 var canvas = document.getElementById('game');
                 var ctx = canvas.getContext('2d');
+                var canvasCenter = new Vector2d(canvas.width / 2, canvas.height / 2);
 
                 var player = new Particle('Player', 10, 10, 10, 5, new Vector2d(0, 0));
 
                 var bodies = [
                     player,
-                    new Particle('Planet', 400, 300, 10000, 25, new Vector2d(0, 0)),
-                    new Particle('Moon', 500, 300, 300, 10, new Vector2d(.65, -0.96))
+                    new Particle('Sun', canvasCenter.x, canvasCenter.y, 100000, 55, new Vector2d(0, 0)),
+                    new Particle('Earth', canvasCenter.x + 300, canvasCenter.y + 300, 500, 20, new Vector2d(.85, -0.86)),
+                    new Particle('Moon', canvasCenter.x + 430, canvasCenter.y + 430, 100, 5, new Vector2d(.855, -0.866))
                 ];
                 
                 var start = performance.now();
@@ -54,6 +89,8 @@
                     x: 0,
                     y: 0
                 };
+
+                
 
                 
                 //Kick off main loop
@@ -106,6 +143,18 @@
                                 for(var j of bodies) {
                                     if(j !== i) {
 
+                                        var a = i.position.x + i.radius;
+                                        var b = j.position.x - j.radius;
+                                        var intersectX = Math.abs(b - a);
+
+                                        var c = i.position.y + i.radius;
+                                        var d = j.position.y - j.radius;
+                                        var intersectY = Math.abs(c - d);
+
+                                        if(intersectY > 0 && intersectY < j.radius && intersectX > 0 && intersectX < j.radius) {
+                                            
+                                        }
+
                                         //Setup a vector pointing from j to i (and normalize it into a unit vector)
                                         var dirVector = Vector2d.subtract(j.position, i.position);
                                        
@@ -131,40 +180,43 @@
                     } 
 
 
-                    ctx.clearRect(0, 0, 800, 600);
-                    ctx.strokeStyle = '#000';
+                    
+                    
+                    
+                    
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                    ctx.save();
+                    ctx.translate(canvasCenter.x, canvasCenter.y);
+                    ctx.scale(camera.zoom, camera.zoom);
+                    ctx.translate(-(canvasCenter.x), -(canvasCenter.y));
+                    ctx.translate(-camera.x, camera.y);
+                    
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    
+                  
                     for(var i of bodies) {
+                        ctx.strokeStyle = '#000';
                         ctx.beginPath();
                         ctx.ellipse(i.position.x, i.position.y, i.radius, i.radius, 0, 0, 2 * Math.PI);
                         ctx.closePath()
                         ctx.stroke();
-                    }
-                    
-                    var points = simulate(10000, player.ref, bodies.map(function(b) { return b.clone(); }));
-                    
-                    if(points.length) {
-                        ctx.beginPath();
-                        ctx.moveTo(points[0].x, points[0].i);
-                        for(p of points) {
-                            ctx.lineTo(p.x, p.y);
-                        }
-                        ctx.strokeStyle = '#cccccc';
-                        ctx.stroke();
-                        ctx.closePath();
-                    }
 
-                    var points = simulate(10000, 'Moon', bodies.map(function(b) { return b.clone(); }));
+                        var points = simulate(10000, i.ref, bodies.map(function(b) { return b.clone(); }));
                     
-                    if(points.length) {
-                        ctx.beginPath();
-                        ctx.moveTo(points[0].x, points[0].i);
-                        for(p of points) {
-                            ctx.lineTo(p.x, p.y);
+                        if(points.length) {
+                            ctx.beginPath();
+                            ctx.moveTo(points[0].x, points[0].i);
+                            for(p of points) {
+                                ctx.lineTo(p.x, p.y);
+                            }
+                            ctx.strokeStyle = '#cccccc';
+                            ctx.stroke();
+                            ctx.closePath();
                         }
-                        ctx.strokeStyle = '#eeeeee';
-                        ctx.stroke();
-                      
                     }
+                    
+                    
 
                     ctx.beginPath();
                     ctx.moveTo(player.position.x, player.position.y);
@@ -173,7 +225,8 @@
                       ctx.strokeStyle = '#000';
                     ctx.stroke();
                     
-                  
+                    ctx.restore();
+
                     if(fuel < 0) {
                         fuel = 0;
                     }
