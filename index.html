@@ -24,10 +24,7 @@
            }
 
            
-           
-            
-
-            document.addEventListener('DOMContentLoaded', function(e) {
+           document.addEventListener('DOMContentLoaded', function(e) {
                 var camera = {
                     x: 0,
                     y: 0,
@@ -76,8 +73,8 @@
                 var bodies = [
                     player,
                     new Particle('Sun', canvasCenter.x, canvasCenter.y, 100000, 55, new Vector2d(0, 0)),
-                    new Particle('Earth', canvasCenter.x + 300, canvasCenter.y + 300, 500, 20, new Vector2d(.85, -0.86)),
-                    new Particle('Moon', canvasCenter.x + 430, canvasCenter.y + 430, 100, 5, new Vector2d(.855, -0.866))
+                    new Particle('Earth', canvasCenter.x + 300, canvasCenter.y + 300, 300, 20, new Vector2d(250, -250)),
+                    new Particle('Moon', canvasCenter.x + 335, canvasCenter.y + 335, 15, 5, new Vector2d(251,  -251))
                 ];
                 
                 var start = performance.now();
@@ -89,9 +86,6 @@
                     x: 0,
                     y: 0
                 };
-
-                
-
                 
                 //Kick off main loop
                 loop();
@@ -126,34 +120,36 @@
 
                         //Apply forward thrust
                         if(keyMap.hasOwnProperty('w') && fuel > 0) {
-                            player.acceleration = Vector2d.multiply(player.heading,0.005);
+                            player.acceleration = Vector2d.multiply(player.heading,1);
                             fuel -= 0.005;
                         }
 
                         //Apply reverse thrust
                         if(keyMap.hasOwnProperty('s') && fuel > 0) {
-                            player.acceleration = Vector2d.multiply(Vector2d.invert(player.heading), 0.005);
+                            player.acceleration = Vector2d.multiply(Vector2d.invert(player.heading), 1);
                             fuel -= 0.005;
                         }
                         
                         var count = 0;
                         for(var i of bodies) {
                                 //Retrieve current/initial velocity and divide by milliseconds
-                                var velocity = i.velocity();
+                                
                                 for(var j of bodies) {
                                     if(j !== i) {
 
-                                        var a = i.position.x + i.radius;
-                                        var b = j.position.x - j.radius;
-                                        var intersectX = Math.abs(b - a);
 
-                                        var c = i.position.y + i.radius;
-                                        var d = j.position.y - j.radius;
-                                        var intersectY = Math.abs(c - d);
-
-                                        if(intersectY > 0 && intersectY < j.radius && intersectX > 0 && intersectX < j.radius) {
+                                        var diff = Vector2d.subtract(j.position, i.position);
+                                        var distance = diff.magnitude();
+                                        
+                                        // if(distance < i.radius + j.radius) {
                                             
-                                        }
+                                            
+                                        //         var v = Vector2d.subtract(j.velocity().divide(j.mass), i.velocity().divide(i.mass));
+                                                
+                                                
+                                        //         i.acceleration.add(Vector2d.multiply(Vector2d.invert(v), i.mass));
+                                        //         j.acceleration.add(Vector2d.multiply(v,j.mass));
+                                        // }
 
                                         //Setup a vector pointing from j to i (and normalize it into a unit vector)
                                         var dirVector = Vector2d.subtract(j.position, i.position);
@@ -163,18 +159,19 @@
                                         
                                         //Calculate gravity based on mass of j and distance to i
                                         //Reduce gravity based on distance from source
-                                        var g = 0.0098 * j.mass * util.inverseSquare(dirMag);
+                                        var g = 9.81 * j.mass * util.inverseSquare(dirMag);
                                        
-                                        velocity.add(dirVector.multiply(g));
+                                        i.acceleration.add(dirVector.multiply(g));
                                     }
 
                                 }
 
-                                
-                                velocity.add(i.acceleration);
-                                
+                                //i.acceleration.multiply(i.mass);
+                                i.acceleration.multiply(0.16).multiply(0.16);
+                                i.acceleration.add(i.velocity());
+
                                 i.lastPosition = i.position.clone();
-                                i.position.add(velocity);
+                                i.position.add(i.acceleration);
                                 i.acceleration = new Vector2d(0, 0);
                         }
                     } 
@@ -324,13 +321,20 @@
                 return Math.sqrt(Math.pow(this.x, 2) + Math.pow(this.y, 2));
            }
             
+           Vector2d.prototype.invert = function() {
+               this.x = -this.x;
+               this.y = -this.y;
+               return this;
+           }
+
            Vector2d.invert = function(v) {
                return new Vector2d(-v.x, -v.y);
            }
 
-        Vector2d.prototype.clone = function() {
-            return new Vector2d(this.x, this.y);
-        }
+
+            Vector2d.prototype.clone = function() {
+                return new Vector2d(this.x, this.y);
+            }
 
            Vector2d.prototype.add = function(v) {
                this.x += v.x;
@@ -371,7 +375,7 @@
            };
 
            Vector2d.divide = function(v, scalar) {
-               return new Vector2d(v1.x / scalar, v1.y / scalar);
+               return new Vector2d(v.x / scalar, v.y / scalar);
            };
 
 
