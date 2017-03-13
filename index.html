@@ -25,17 +25,22 @@
 
            
            document.addEventListener('DOMContentLoaded', function(e) {
-                // var camera = {
-                //     x: 0,
-                //     y: 0,
-                //     zoom: 0.000001
-                // };
-
-                var camera =  { 
-                    x: -150492307.6923074, 
-                    y: 150353846.15384635, 
-                    zoom: 0.0016
+                
+                var canvas = document.getElementById('game');
+                var ctx = canvas.getContext('2d');
+                var canvasCenter = new Vector2d(canvas.width / 2, canvas.height / 2);
+                
+                var camera = {
+                    x: (canvasCenter.x - 250000 * 2 - 2500),
+                    y: -(canvasCenter.y - 250000 * 2 - 2500),
+                    zoom: 0.05
                 };
+
+                // var camera =  { 
+                //     x: -150492307.6923074, 
+                //     y: 150353846.15384635, 
+                //     zoom: 0.0016
+                // };
                
                  var keyMap = {};
                  var mouseState = {
@@ -52,11 +57,11 @@
 
                 window.addEventListener('wheel', function(e) {
                     
-                    var increment = 0.00001;
+                    var increment = 0.0002;
 
                     camera.zoom += e.wheelDelta / 120 * increment;
-                    if(camera.zoom < 0) {
-                        camera.zoom = 0;
+                    if(camera.zoom < 0.0002) {
+                        camera.zoom = 0.0002;
                     }
 
                     
@@ -69,8 +74,8 @@
 
                 window.addEventListener('mousemove', function(e) {
                     if(mouseState.down) {
-                        camera.x -= e.movementX * camera.zoom;
-                        camera.y += e.movementY * camera.zoom;
+                        camera.x -= e.movementX / camera.zoom;
+                        camera.y += e.movementY / camera.zoom;
                     }
                 });
 
@@ -78,24 +83,22 @@
                     mouseState.down = false;
                 });
 
-                var canvas = document.getElementById('game');
-                var ctx = canvas.getContext('2d');
-                var canvasCenter = new Vector2d(canvas.width / 2, canvas.height / 2);
+                
 
-                var player = new Particle('Player', 10, 10, 10, 5, new Vector2d(0, 0));
+                var player = new Particle('Player', canvasCenter.x - 250000 * 2 - 2500 * 3 - 100 * 3, canvasCenter.x - 250000 * 2 - 2500 * 3 - 100 * 3, 0.0001, 0.01, new Vector2d(0, 0), 'pink');
 
                 var bodies = [
                     player,
-                    new Particle('Sun', canvasCenter.x, canvasCenter.y, 100000, 695700, new Vector2d(0, 0), '#fcce00'),
-                    new Particle('Earth', canvasCenter.x - (149600000 + 695700 + 6371), canvasCenter.y - (149600000 + 695700 + 6371), 20, 6371, new Vector2d(250, -250), 'blue'),
-                    new Particle('Moon', canvasCenter.x - (149600000 + 695700 + 6371 - 19736), canvasCenter.y - (149600000 + 695700 + 6371 + 19736), 15, 1736, new Vector2d(251,  -251), 'white')
+                    new Particle('Sun', canvasCenter.x, canvasCenter.y, 1000, 250000, new Vector2d(0, 0), '#fcce00'),
+                    new Particle('Earth', canvasCenter.x - 250000 * 2 - 2500, canvasCenter.y - 250000 * 2 - 2500, 100, 2500, new Vector2d(0, 0), 'blue'),
+                    new Particle('Moon', canvasCenter.x - 250000 * 2 - 2500 * 3 - 100, canvasCenter.x - 250000 * 2 - 2500 * 3 - 100, 5, 100, new Vector2d(50, -50), 'white'),
                 ];
                 
                 var start = performance.now();
                 var current = current;
                 var previous = start;
                 var accumulated = 0;
-                var fuel = 50;
+                var fuel = 70;
                 var v = {
                     x: 0,
                     y: 0
@@ -106,6 +109,7 @@
                 
                 
                 function loop() {
+                    
                     //Queue up next render/loop call
                     window.requestAnimationFrame(loop);
 
@@ -117,7 +121,7 @@
 
                     //While time is available (in increments of 16 milliseconds
                     //Simulate/process physics
-                    while(accumulated % 16 > 0) {
+                    while(accumulated >= 16) {
                         //Consume 16 milliseconds
                         accumulated -= 16;
                         
@@ -149,33 +153,34 @@
                                 //Retrieve current/initial velocity and divide by milliseconds
                                 
                                 for(var j of bodies) {
-                                    if(j !== i) {
+                                    //note - j.mass > i.mass
+                                    //Objects are not affected by items with a smaller mass
+                                    //This is to prevent suns etc.. being pulled and creating instability - unrealistic, but needed here
+                                    if(j !== i && j.mass > i.mass) {
 
 
                                         var diff = Vector2d.subtract(j.position, i.position);
                                         var distance = diff.magnitude();
                                         
-                                        // if(distance < i.radius + j.radius) {
+                                        if(distance < i.radius + j.radius) {
+                                        
+                                            var v = Vector2d.subtract(j.velocity().divide(j.mass), i.velocity().divide(i.mass));
                                             
-                                            
-                                        //         var v = Vector2d.subtract(j.velocity().divide(j.mass), i.velocity().divide(i.mass));
-                                                
-                                                
-                                        //         i.acceleration.add(Vector2d.multiply(Vector2d.invert(v), i.mass));
-                                        //         j.acceleration.add(Vector2d.multiply(v,j.mass));
-                                        // }
+                                            i.acceleration.add(Vector2d.multiply(v, i.mass));
+
+                                            //j.acceleration.add(Vector2d.multiply(v,j.mass));
+                                        }
 
                                         //Setup a vector pointing from j to i (and normalize it into a unit vector)
-                                        // var dirVector = Vector2d.subtract(j.position, i.position);
+                                        var dirVector = Vector2d.subtract(j.position, i.position);
                                        
-                                        // var dirMag = dirVector.magnitude();
-                                        // dirVector.divide(dirMag);
+                                        var dirMag = dirVector.magnitude();
+                                        dirVector.divide(dirMag);
                                         
-                                        // //Calculate gravity based on mass of j and distance to i
-                                        // //Reduce gravity based on distance from source
-                                        // var g = 9.81 * j.mass * util.inverseSquare(dirMag);
-                                       
-                                        // i.acceleration.add(dirVector.multiply(g));
+                                        //Calculate gravity based on mass of j and distance to i
+                                        //Reduce gravity based on distance from source
+                                        var g = 10000 * j.mass * util.inverseSquare(dirMag);
+                                        i.acceleration.add(dirVector.multiply(g));
                                     }
 
                                 }
@@ -199,9 +204,9 @@
                     ctx.translate(canvasCenter.x, canvasCenter.y);
                     
                     
-                    ctx.scale(camera.zoom * 0.1, camera.zoom * 0.1);
+                    ctx.scale(camera.zoom, camera.zoom);
                     ctx.translate(-(canvasCenter.x), -(canvasCenter.y));
-                    ctx.translate(-(camera.x * 0.1), camera.y * 0.1);
+                    ctx.translate(-(camera.x), camera.y);
                     
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     
@@ -213,14 +218,14 @@
                         
                         
                         ctx.beginPath();
-                        ctx.ellipse(i.position.x * 0.1, i.position.y * 0.1, i.radius * 0.1, i.radius * 0.1, 0, 0, 2 * Math.PI);
+                        ctx.ellipse(i.position.x, i.position.y, i.radius, i.radius, 0, 0, 2 * Math.PI);
                         ctx.closePath();
                         ctx.stroke();
                         ctx.fillStyle = i.colour;
                         ctx.fill();
 
 
-                        var points = simulate(10000, i.ref, bodies.map(function(b) { return b.clone(); }));
+                        var points = simulate(50000, i.ref, bodies.map(function(b) { return b.clone(); }));
                     
                         if(points.length) {
                             ctx.beginPath();
@@ -249,8 +254,9 @@
                         fuel = 0;
                     }
 
+                    ctx.fillStyle = "white";
                     ctx.font = "30px Arial";
-                    ctx.fillText("Fuel: " + fuel.toFixed(2) + ' units',10,50);
+                    ctx.fillText("Fuel: " + fuel.toFixed(2) + ' units', 10, 50);
 
 
                     
@@ -264,17 +270,35 @@
 
             function simulate(accumulated, ref, bodies) {
                 var points = [];
+
                 
                 while(accumulated >= 16) {
+                    //Consume 16 milliseconds
                     accumulated -= 16;
-                    
-                   for(var i of bodies) {
-                      
-                            
+
+                    var count = 0;
+                    for(var i of bodies) {
+                        
                         //Retrieve current/initial velocity and divide by milliseconds
-                        var velocity = i.velocity();
+                        
                         for(var j of bodies) {
-                            if(j !== i) {
+                            //note - j.mass > i.mass
+                            //Objects are not affected by items with a smaller mass
+                            //This is to prevent suns etc.. being pulled and creating instability - unrealistic, but needed here
+                            if(j !== i && j.mass > i.mass) {
+
+
+                                var diff = Vector2d.subtract(j.position, i.position);
+                                var distance = diff.magnitude();
+                                
+                                if(distance < i.radius + j.radius) {
+                                    
+                                        var v = Vector2d.subtract(j.velocity().divide(j.mass), i.velocity().divide(i.mass));
+                                        
+                                        i.acceleration.add(Vector2d.multiply(v, i.mass));
+
+                                        //j.acceleration.add(Vector2d.multiply(v,j.mass));
+                                }
 
                                 //Setup a vector pointing from j to i (and normalize it into a unit vector)
                                 var dirVector = Vector2d.subtract(j.position, i.position);
@@ -284,23 +308,26 @@
                                 
                                 //Calculate gravity based on mass of j and distance to i
                                 //Reduce gravity based on distance from source
-                                var g = 0.0098 * j.mass * util.inverseSquare(dirMag);
-                                
-                                velocity.add(dirVector.multiply(g));
+                                var g = 10000 * j.mass * util.inverseSquare(dirMag);
+                                i.acceleration.add(dirVector.multiply(g));
                             }
 
                         }
-                        
+
+                        //i.acceleration.multiply(i.mass);
+                        i.acceleration.multiply(0.16).multiply(0.16);
+                        i.acceleration.add(i.velocity());
+
                         i.lastPosition = i.position.clone();
-                        i.position.add(velocity);
-                        if(ref === i.ref) {
-                            points.push({
-                                x: i.position.x,
-                                y: i.position.y
-                            });
+                        i.position.add(i.acceleration);
+                        i.acceleration = new Vector2d(0, 0);
+
+                        if(i.ref === ref) {
+                            points.push(i.position.clone());
                         }
                     }
-                } 
+     
+                }
                 
                 return points;
             }
@@ -325,6 +352,7 @@
                 p.position = this.position.clone();
                 p.lastPosition = this.lastPosition.clone();
                 p.heading = this.heading.clone();
+                p.acceleration = this.acceleration.clone();
                 return p;
             }
 
