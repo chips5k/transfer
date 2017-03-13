@@ -31,8 +31,8 @@
                 var canvasCenter = new Vector2d(canvas.width / 2, canvas.height / 2);
                 
                 var camera = {
-                    x: (canvasCenter.x - 250000 * 2 - 2500),
-                    y: -(canvasCenter.y - 250000 * 2 - 2500),
+                    x: (canvasCenter.x - 250000 * 2 - 2500 * 3 - 100 * 3),
+                    y: -(canvasCenter.x - 250000 * 2 - 2500 * 3 - 100 * 3),
                     zoom: 0.05
                 };
 
@@ -257,6 +257,9 @@
                     ctx.fillStyle = "white";
                     ctx.font = "30px Arial";
                     ctx.fillText("Fuel: " + fuel.toFixed(2) + ' units', 10, 50);
+
+                    ctx.font = "12px Arial";
+                    ctx.fillText("Q/E to rotate, W/S to thrust, Mouse wheel to zoom, click + drag to pan", canvas.width - 400, 48);
 
 
                     
