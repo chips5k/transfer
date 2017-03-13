@@ -25,12 +25,18 @@
 
            
            document.addEventListener('DOMContentLoaded', function(e) {
-                var camera = {
-                    x: 0,
-                    y: 0,
-                    zoom: 1
-                };
+                // var camera = {
+                //     x: 0,
+                //     y: 0,
+                //     zoom: 0.000001
+                // };
 
+                var camera =  { 
+                    x: -150492307.6923074, 
+                    y: 150353846.15384635, 
+                    zoom: 0.0016
+                };
+               
                  var keyMap = {};
                  var mouseState = {
                      down: false
@@ -45,7 +51,15 @@
                 });
 
                 window.addEventListener('wheel', function(e) {
-                    camera.zoom += e.wheelDelta > 0 ? 0.03 : -0.03;
+                    
+                    var increment = 0.00001;
+
+                    camera.zoom += e.wheelDelta / 120 * increment;
+                    if(camera.zoom < 0) {
+                        camera.zoom = 0;
+                    }
+
+                    
                 });
 
                 window.addEventListener('mousedown', function(e) {
@@ -55,8 +69,8 @@
 
                 window.addEventListener('mousemove', function(e) {
                     if(mouseState.down) {
-                        camera.x -= e.movementX;
-                        camera.y += e.movementY;
+                        camera.x -= e.movementX * camera.zoom;
+                        camera.y += e.movementY * camera.zoom;
                     }
                 });
 
@@ -72,9 +86,9 @@
 
                 var bodies = [
                     player,
-                    new Particle('Sun', canvasCenter.x, canvasCenter.y, 100000, 55, new Vector2d(0, 0)),
-                    new Particle('Earth', canvasCenter.x + 300, canvasCenter.y + 300, 300, 20, new Vector2d(250, -250)),
-                    new Particle('Moon', canvasCenter.x + 335, canvasCenter.y + 335, 15, 5, new Vector2d(251,  -251))
+                    new Particle('Sun', canvasCenter.x, canvasCenter.y, 100000, 695700, new Vector2d(0, 0), '#fcce00'),
+                    new Particle('Earth', canvasCenter.x - (149600000 + 695700 + 6371), canvasCenter.y - (149600000 + 695700 + 6371), 20, 6371, new Vector2d(250, -250), 'blue'),
+                    new Particle('Moon', canvasCenter.x - (149600000 + 695700 + 6371 - 19736), canvasCenter.y - (149600000 + 695700 + 6371 + 19736), 15, 1736, new Vector2d(251,  -251), 'white')
                 ];
                 
                 var start = performance.now();
@@ -152,16 +166,16 @@
                                         // }
 
                                         //Setup a vector pointing from j to i (and normalize it into a unit vector)
-                                        var dirVector = Vector2d.subtract(j.position, i.position);
+                                        // var dirVector = Vector2d.subtract(j.position, i.position);
                                        
-                                        var dirMag = dirVector.magnitude();
-                                        dirVector.divide(dirMag);
+                                        // var dirMag = dirVector.magnitude();
+                                        // dirVector.divide(dirMag);
                                         
-                                        //Calculate gravity based on mass of j and distance to i
-                                        //Reduce gravity based on distance from source
-                                        var g = 9.81 * j.mass * util.inverseSquare(dirMag);
+                                        // //Calculate gravity based on mass of j and distance to i
+                                        // //Reduce gravity based on distance from source
+                                        // var g = 9.81 * j.mass * util.inverseSquare(dirMag);
                                        
-                                        i.acceleration.add(dirVector.multiply(g));
+                                        // i.acceleration.add(dirVector.multiply(g));
                                     }
 
                                 }
@@ -178,26 +192,33 @@
 
 
                     
-                    
-                    
-                    
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
                     ctx.save();
                     ctx.translate(canvasCenter.x, canvasCenter.y);
-                    ctx.scale(camera.zoom, camera.zoom);
+                    
+                    
+                    ctx.scale(camera.zoom * 0.1, camera.zoom * 0.1);
                     ctx.translate(-(canvasCenter.x), -(canvasCenter.y));
-                    ctx.translate(-camera.x, camera.y);
+                    ctx.translate(-(camera.x * 0.1), camera.y * 0.1);
                     
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     
-                  
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
                     for(var i of bodies) {
                         ctx.strokeStyle = '#000';
+                        
+                        
                         ctx.beginPath();
-                        ctx.ellipse(i.position.x, i.position.y, i.radius, i.radius, 0, 0, 2 * Math.PI);
-                        ctx.closePath()
+                        ctx.ellipse(i.position.x * 0.1, i.position.y * 0.1, i.radius * 0.1, i.radius * 0.1, 0, 0, 2 * Math.PI);
+                        ctx.closePath();
                         ctx.stroke();
+                        ctx.fillStyle = i.colour;
+                        ctx.fill();
+
 
                         var points = simulate(10000, i.ref, bodies.map(function(b) { return b.clone(); }));
                     
@@ -219,7 +240,7 @@
                     ctx.moveTo(player.position.x, player.position.y);
                     ctx.lineTo(player.position.x + player.heading.x * player.radius, player.position.y + player.heading.y * player.radius);
                     ctx.closePath();
-                      ctx.strokeStyle = '#000';
+                    ctx.strokeStyle = '#000';
                     ctx.stroke();
                     
                     ctx.restore();
@@ -284,9 +305,7 @@
                 return points;
             }
 
-            
-
-            function Particle(ref, x, y, mass, radius, acceleration) {
+            function Particle(ref, x, y, mass, radius, acceleration, colour) {
                 this.ref = ref;
                 this.acceleration = acceleration;
                 this.position = new Vector2d(x, y);
@@ -294,6 +313,7 @@
                 this.heading = new Vector2d(0.5, 0.5);
                 this.mass = mass;
                 this.radius = radius;
+                this.colour = colour;
             }
 
 
