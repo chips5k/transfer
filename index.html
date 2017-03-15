@@ -57,11 +57,11 @@
 
                 window.addEventListener('wheel', function(e) {
                     
-                    var increment = 0.0002;
+                    var increment = 0.0003;
 
                     camera.zoom += e.wheelDelta / 120 * increment;
-                    if(camera.zoom < 0.0002) {
-                        camera.zoom = 0.0002;
+                    if(camera.zoom < 0.00001) {
+                        camera.zoom = 0.00001;
                     }
 
                     
@@ -102,8 +102,11 @@
                 var v = {
                     x: 0,
                     y: 0
+                    
                 };
-                
+
+                var maxAcceleration = 0;
+                var orbiting = null;
                 //Kick off main loop
                 loop();
                 
@@ -147,6 +150,9 @@
                             player.acceleration = Vector2d.multiply(Vector2d.invert(player.heading), 1);
                             fuel -= 0.005;
                         }
+
+                        orbiting = false;
+                        maxAcceleration = 0;
                         
                         var count = 0;
                         for(var i of bodies) {
@@ -181,6 +187,12 @@
                                         //Reduce gravity based on distance from source
                                         var g = 10000 * j.mass * util.inverseSquare(dirMag);
                                         i.acceleration.add(dirVector.multiply(g));
+                                        if(i === player) {
+                                            if(Math.abs(g) > Math.abs(maxAcceleration)) {
+                                                maxAcceleration = g;
+                                                orbiting = j;
+                                            }
+                                        }
                                     }
 
                                 }
@@ -261,8 +273,23 @@
                     ctx.font = "12px Arial";
                     ctx.fillText("Q/E to rotate, W/S to thrust, Mouse wheel to zoom, click + drag to pan", canvas.width - 400, 48);
 
+                    ctx.font = "12px Arial";
+                    var currentOrbit = 'No Orbit ';
+                    if(orbiting !== null) {
+                        currentOrbit = 'Orbiting: ' + orbiting.ref;
+                    }
+                    ctx.fillText(currentOrbit, canvas.width - 400, canvas.height - 24);
 
-                    
+                    ctx.closePath();
+                    ctx.beginPath();
+                    ctx.moveTo(40, canvas.height - 60);
+                    ctx.lineTo(40 + player.heading.x * 25, canvas.height - 60 + player.heading.y * 25);
+                    ctx.closePath();
+                    ctx.strokeStyle = 'white';
+                    ctx.stroke();
+
+                    ctx.fillText('Heading', 20, canvas.height - 20);
+
                     previous = current;
                 }
 
