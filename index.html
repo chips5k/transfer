@@ -85,7 +85,7 @@
 
                 
 
-                var player = new Particle('Player', canvasCenter.x - 250000 * 2 - 2500 * 3 - 100 * 3, canvasCenter.x - 250000 * 2 - 2500 * 3 - 100 * 3, 0.0001, 0.01, new Vector2d(0, 0), 'pink');
+                var player = new Particle('Player', canvasCenter.x - 250000 * 2 - 2500 * 3 - 100 * 3, canvasCenter.x - 250000 * 2 - 2500 * 3 - 100 * 3, 0.0001, 15, new Vector2d(0, 0), 'pink');
 
                 var bodies = [
                     player,
@@ -105,8 +105,6 @@
                     
                 };
 
-                var maxAcceleration = 0;
-                var orbiting = null;
                 //Kick off main loop
                 loop();
                 
@@ -151,11 +149,12 @@
                             fuel -= 0.005;
                         }
 
-                        orbiting = false;
-                        maxAcceleration = 0;
+                       
                         
                         var count = 0;
                         for(var i of bodies) {
+                                i.maxAcceleration = 0;
+                                i.orbiting = false;
                                 //Retrieve current/initial velocity and divide by milliseconds
                                 
                                 for(var j of bodies) {
@@ -187,11 +186,10 @@
                                         //Reduce gravity based on distance from source
                                         var g = 10000 * j.mass * util.inverseSquare(dirMag);
                                         i.acceleration.add(dirVector.multiply(g));
-                                        if(i === player) {
-                                            if(Math.abs(g) > Math.abs(maxAcceleration)) {
-                                                maxAcceleration = g;
-                                                orbiting = j;
-                                            }
+                                        
+                                        if(Math.abs(g) > Math.abs(i.maxAcceleration)) {
+                                            i.maxAcceleration = g;
+                                            i.orbiting = j;
                                         }
                                     }
 
@@ -237,12 +235,15 @@
                         ctx.fill();
 
 
-                        var points = simulate(50000, i.ref, bodies.map(function(b) { return b.clone(); }));
-                    
+                        var points = simulate(50000, i.ref, bodies.map(function(b) { return b.clone(); }), i.orbiting);
+                        
                         if(points.length) {
                             ctx.beginPath();
                             ctx.moveTo(points[0].x, points[0].i);
                             for(p of points) {
+                                if(i.orbiting) {
+                                    p.add(i.orbiting.position);
+                                }
                                 ctx.lineTo(p.x, p.y);
                             }
                             ctx.strokeStyle = '#cccccc';
@@ -275,8 +276,8 @@
 
                     ctx.font = "12px Arial";
                     var currentOrbit = 'No Orbit ';
-                    if(orbiting !== null) {
-                        currentOrbit = 'Orbiting: ' + orbiting.ref;
+                    if(player.orbiting !== null) {
+                        currentOrbit = 'Orbiting: ' + player.orbiting.ref;
                     }
                     ctx.fillText(currentOrbit, canvas.width - 400, canvas.height - 24);
 
@@ -301,6 +302,9 @@
             function simulate(accumulated, ref, bodies) {
                 var points = [];
 
+                var maxAcceleration = 0;
+                var orbiting = null;
+                
                 
                 while(accumulated >= 16) {
                     //Consume 16 milliseconds
@@ -340,6 +344,13 @@
                                 //Reduce gravity based on distance from source
                                 var g = 10000 * j.mass * util.inverseSquare(dirMag);
                                 i.acceleration.add(dirVector.multiply(g));
+                                if(i.ref === ref) {
+                                    if(Math.abs(g) > Math.abs(maxAcceleration)) {
+                                        maxAcceleration = g;
+                                        orbiting = j;
+                                    }
+                                }
+                                
                             }
 
                         }
@@ -353,7 +364,12 @@
                         i.acceleration = new Vector2d(0, 0);
 
                         if(i.ref === ref) {
-                            points.push(i.position.clone());
+                            if(orbiting) {
+                                 points.push(Vector2d.subtract(i.position, orbiting.position));
+                            } else {
+                                 points.push(i.position.clone());
+                            }
+                           
                         }
                     }
      
@@ -371,6 +387,8 @@
                 this.mass = mass;
                 this.radius = radius;
                 this.colour = colour;
+                this.orbiting = null;
+                this.maxAcceleration = 0;
             }
 
 
